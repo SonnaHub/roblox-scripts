@@ -1030,3 +1030,117 @@ ToolsTab:CreateKeybind({
     end
 
 })
+
+--==============================
+-- BUILDER TOOL (WORK WITH FREECAM)
+--==============================
+
+ToolsTab:CreateSection("Builder Tool")
+
+local BuilderEnabled = false
+local BuildFolder = Instance.new("Folder", workspace)
+BuildFolder.Name = "SonnaBuilder"
+
+local SelectedPart
+local MoveSpeed = 1
+local SizeStep = 0.5
+
+local function createBlock(pos)
+    local p = Instance.new("Part")
+    p.Size = Vector3.new(4,4,4)
+    p.Anchored = true
+    p.Material = Enum.Material.SmoothPlastic
+    p.Color = Color3.fromRGB(0, 170, 255)
+    p.Position = pos or (cam.CFrame.Position + cam.CFrame.LookVector * 10)
+    p.Parent = BuildFolder
+    return p
+end
+
+local function selectPart(part)
+    if SelectedPart then
+        SelectedPart.Color = Color3.fromRGB(0,170,255)
+    end
+    SelectedPart = part
+    if part then
+        part.Color = Color3.fromRGB(255, 170, 0)
+    end
+end
+
+-- Toggle Builder
+ToolsTab:CreateToggle({
+    Name = "Enable Builder Tool",
+    CurrentValue = false,
+    Callback = function(v)
+        BuilderEnabled = v
+        if v and #BuildFolder:GetChildren() == 0 then
+            selectPart(createBlock())
+        end
+        if not v then
+            selectPart(nil)
+        end
+    end
+})
+
+-- Create new block
+ToolsTab:CreateButton({
+    Name = "Add Block",
+    Callback = function()
+        if not BuilderEnabled then return end
+        selectPart(createBlock())
+    end
+})
+
+-- Delete block
+ToolsTab:CreateButton({
+    Name = "Delete Selected Block",
+    Callback = function()
+        if SelectedPart then
+            SelectedPart:Destroy()
+            SelectedPart = nil
+        end
+    end
+})
+
+-- Input handling
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp or not BuilderEnabled or not SelectedPart then return end
+
+    local move = Vector3.zero
+
+    if input.KeyCode == Enum.KeyCode.Up then move = Vector3.new(0,0,-MoveSpeed) end
+    if input.KeyCode == Enum.KeyCode.Down then move = Vector3.new(0,0,MoveSpeed) end
+    if input.KeyCode == Enum.KeyCode.Left then move = Vector3.new(-MoveSpeed,0,0) end
+    if input.KeyCode == Enum.KeyCode.Right then move = Vector3.new(MoveSpeed,0,0) end
+
+    if move ~= Vector3.zero then
+        SelectedPart.CFrame += cam.CFrame:VectorToWorldSpace(move)
+    end
+
+    -- Resize
+    if input.KeyCode == Enum.KeyCode.R then
+        SelectedPart.Size += Vector3.new(SizeStep, SizeStep, SizeStep)
+    end
+    if input.KeyCode == Enum.KeyCode.F then
+        SelectedPart.Size -= Vector3.new(SizeStep, SizeStep, SizeStep)
+    end
+
+    -- Delete
+    if input.KeyCode == Enum.KeyCode.Delete then
+        SelectedPart:Destroy()
+        SelectedPart = nil
+    end
+
+    -- New block
+    if input.KeyCode == Enum.KeyCode.G then
+        selectPart(createBlock())
+    end
+end)
+
+-- Mouse select
+local mouse = lp:GetMouse()
+mouse.Button1Down:Connect(function()
+    if not BuilderEnabled then return end
+    if mouse.Target and mouse.Target:IsDescendantOf(BuildFolder) then
+        selectPart(mouse.Target)
+    end
+end)
