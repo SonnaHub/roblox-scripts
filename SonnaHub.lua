@@ -86,7 +86,7 @@ Name = "Sonna Hub | Rayfield",
 
 LoadingTitle = "Sonna Hub",
 
-LoadingSubtitle = "Rayfield UI",
+LoadingSubtitle = "tiktok: @toiikhongbietgica",
 
 ConfigurationSaving = { Enabled = false },
 
