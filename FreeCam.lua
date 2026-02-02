@@ -22,7 +22,7 @@ local camera = workspace.CurrentCamera
 
 pcall(function()
 
-	StarterGui:SetCore("SendNotification", {		Title = "Free Cam",
+	StarterGui:SetCore("SendNotification", {		Title = "shift + P",
 
 		Text = "Free Cam has been activated",
 
