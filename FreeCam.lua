@@ -8,7 +8,6 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
-local CAS = game:GetService("ContextActionService")
 
 -- PLAYER / CAMERA
 local player = Players.LocalPlayer
@@ -17,8 +16,8 @@ local camera = workspace.CurrentCamera
 -- NOTIFY
 pcall(function()
 	StarterGui:SetCore("SendNotification", {
-		Title = "Shift + P",
-		Text = "Free Cam has been activated",
+		Title = "Free Cam",
+		Text = "Shift + P to toggle",
 		Duration = 3
 	})
 end)
@@ -31,62 +30,43 @@ local function getChar()
 end
 
 local function getHumanoid()
-	return getChar():FindFirstChildOfClass("Humanoid")
+	return getChar():WaitForChild("Humanoid")
 end
 
+local function getRoot()
+	return getChar():WaitForChild("HumanoidRootPart")
+end
+
+--=====================
+-- LOCK PLAYER (FULL FIX)
+--=====================
 local function lockPlayer(state)
 	local hum = getHumanoid()
-	local root = getChar():FindFirstChild("HumanoidRootPart")
+	local root = getRoot()
 
-	if hum then
-		if state then
-			hum.WalkSpeed = 0
-			hum.JumpPower = 0
-			hum.AutoRotate = false
-			hum:Move(Vector3.zero, false)
-		else
-			hum.WalkSpeed = 16
-			hum.JumpPower = 50
-			hum.AutoRotate = true
-		end
+	if state then
+		hum.PlatformStand = true
+		hum.AutoRotate = false
+		root.Anchored = true
+	else
+		hum.PlatformStand = false
+		hum.AutoRotate = true
+		root.Anchored = false
 	end
 
-	if root then
-		root.AssemblyLinearVelocity = Vector3.zero
-	end
-end
-
---=====================
--- BLOCK MOVEMENT (PC FIX)
---=====================
-local function blockMovement()
-	CAS:BindAction(
-		"BlockMovement",
-		function()
-			return Enum.ContextActionResult.Sink
-		end,
-		false,
-		Enum.KeyCode.W,
-		Enum.KeyCode.A,
-		Enum.KeyCode.S,
-		Enum.KeyCode.D,
-		Enum.KeyCode.Space
-	)
-end
-
-local function unblockMovement()
-	CAS:UnbindAction("BlockMovement")
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
 end
 
 --=====================
 -- SETTINGS
 --=====================
-local BASE_SPEED = 1.5
+local BASE_SPEED = 1.6
 local FAST_SPEED = 6
-local ACCEL = 10
-local DECEL = 14
-local ROT_SMOOTH = 7
-local SENSITIVITY = 0.006
+local ACCEL = 12
+local DECEL = 16
+local ROT_SMOOTH = 10
+local SENSITIVITY = 0.007
 
 --=====================
 -- STATE
@@ -105,7 +85,6 @@ local function enable()
 	enabled = true
 
 	lockPlayer(true)
-	blockMovement()
 
 	camera.CameraType = Enum.CameraType.Scriptable
 	camera.CameraSubject = nil
@@ -123,13 +102,14 @@ local function disable()
 	enabled = false
 
 	lockPlayer(false)
-	unblockMovement()
 
 	camera.CameraType = Enum.CameraType.Custom
 	camera.CameraSubject = getHumanoid()
 
 	UIS.MouseBehavior = Enum.MouseBehavior.Default
 	UIS.MouseIconEnabled = true
+
+	camVel = Vector3.zero
 end
 
 --=====================
@@ -159,13 +139,15 @@ end)
 RunService.RenderStepped:Connect(function(dt)
 	if not enabled then return end
 
-	-- RAW MOUSE DELTA
+	-- FORCE LOCK (executor fix)
+	UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+	-- MOUSE LOOK
 	local delta = UIS:GetMouseDelta()
 	targetYaw -= delta.X * SENSITIVITY
 	targetPitch -= delta.Y * SENSITIVITY
 	targetPitch = math.clamp(targetPitch, -math.rad(80), math.rad(80))
 
-	-- SMOOTH ROTATION
 	yaw += (targetYaw - yaw) * math.clamp(dt * ROT_SMOOTH, 0, 1)
 	pitch += (targetPitch - pitch) * math.clamp(dt * ROT_SMOOTH, 0, 1)
 
@@ -179,6 +161,10 @@ RunService.RenderStepped:Connect(function(dt)
 	if keys[Enum.KeyCode.D] then dir += Vector3.new(1, 0, 0) end
 	if keys[Enum.KeyCode.E] then dir += Vector3.new(0, 1, 0) end
 	if keys[Enum.KeyCode.Q] then dir += Vector3.new(0, -1, 0) end
+
+	if dir.Magnitude > 0 then
+		dir = dir.Unit
+	end
 
 	local speed = UIS:IsKeyDown(Enum.KeyCode.LeftShift) and FAST_SPEED or BASE_SPEED
 	local targetVel = rotation:VectorToWorldSpace(dir) * speed
