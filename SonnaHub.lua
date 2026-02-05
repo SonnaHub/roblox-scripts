@@ -1030,3 +1030,60 @@ ToolsTab:CreateKeybind({
     end
 
 })
+
+--==============================
+-- FAST TOUCH (INSTANT INTERACT)
+--==============================
+
+ToolsTab:CreateSection("Quick Actions")
+
+local FastTouch = false
+local savedPrompts = {}
+
+local function applyFastTouch(state)
+    FastTouch = state
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            if state then
+                -- lưu giá trị cũ
+                if not savedPrompts[obj] then
+                    savedPrompts[obj] = {
+                        HoldDuration = obj.HoldDuration,
+                        Distance = obj.MaxActivationDistance
+                    }
+                end
+                -- instant
+                obj.HoldDuration = 0
+                obj.MaxActivationDistance = 15
+            else
+                -- trả về mặc định
+                local old = savedPrompts[obj]
+                if old then
+                    obj.HoldDuration = old.HoldDuration
+                    obj.MaxActivationDistance = old.Distance
+                end
+            end
+        end
+    end
+end
+
+-- áp dụng cho prompt mới spawn
+workspace.DescendantAdded:Connect(function(obj)
+    if FastTouch and obj:IsA("ProximityPrompt") then
+        savedPrompts[obj] = {
+            HoldDuration = obj.HoldDuration,
+            Distance = obj.MaxActivationDistance
+        }
+        obj.HoldDuration = 0
+        obj.MaxActivationDistance = 15
+    end
+end)
+
+ToolsTab:CreateToggle({
+    Name = "INSTANT INTERACT",
+    CurrentValue = false,
+    Callback = function(v)
+        applyFastTouch(v)
+    end
+})
