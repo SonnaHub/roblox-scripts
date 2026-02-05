@@ -28,21 +28,7 @@ local Stats = game:GetService("Stats")
 
 local lp = Players.LocalPlayer
 
---==============================
 
--- ANTI AFK (AUTO ENABLE)
-
---==============================
-
-lp.Idled:Connect(function()
-
-VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-
-task.wait(1)
-
-VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-
-end)
 
 --==============================
 
@@ -73,6 +59,32 @@ writefile(ServerFile, HttpService:JSONEncode(tbl))
 end
 
 end
+
+--==============================
+-- ANTI AFK (DEFAULT ON, TOGGLE)
+--==============================
+
+local antiAfkEnabled = true
+local antiAfkConn
+
+local function startAntiAfk()
+    if antiAfkConn then return end
+    antiAfkConn = lp.Idled:Connect(function()
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
+end
+
+local function stopAntiAfk()
+    if antiAfkConn then
+        antiAfkConn:Disconnect()
+        antiAfkConn = nil
+    end
+end
+
+-- AUTO ENABLE WHEN LOAD
+startAntiAfk()
 
 --==============================
 
@@ -135,6 +147,22 @@ ScriptTab:CreateButton({
     end
 })
 
+local PlayerTab = Window:CreateTab("Player", 4483362458)
+
+PlayerTab:CreateSection("AFK")
+
+PlayerTab:CreateToggle({
+    Name = "Anti AFK",
+    CurrentValue = true,
+    Callback = function(v)
+        antiAfkEnabled = v
+        if v then
+            startAntiAfk()
+        else
+            stopAntiAfk()
+        end
+    end
+})
 --==============================
 
 -- HUMANOID SAFE
