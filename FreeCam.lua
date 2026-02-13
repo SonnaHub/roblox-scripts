@@ -40,18 +40,27 @@ end
 --=====================
 -- LOCK PLAYER (FULL FIX)
 --=====================
+local oldWalkSpeed = 16
+local oldJumpPower = 50
+
 local function lockPlayer(state)
 	local hum = getHumanoid()
 	local root = getRoot()
 
 	if state then
-		hum.PlatformStand = true
+		-- lưu lại chỉ số cũ
+		oldWalkSpeed = hum.WalkSpeed
+		oldJumpPower = hum.JumpPower
+
+		-- khóa di chuyển nhưng vẫn đứng idle bình thường
+		hum.WalkSpeed = 0
+		hum.JumpPower = 0
 		hum.AutoRotate = false
-		root.Anchored = true
 	else
-		hum.PlatformStand = false
+		-- trả lại như cũ
+		hum.WalkSpeed = oldWalkSpeed
+		hum.JumpPower = oldJumpPower
 		hum.AutoRotate = true
-		root.Anchored = false
 	end
 
 	root.AssemblyLinearVelocity = Vector3.zero
