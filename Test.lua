@@ -1,111 +1,111 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local plr = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
--- Biến lưu trữ giá trị
-local WalkSpeedValue = 16
-local JumpPowerValue = 50
-local SpeedEnabled = false
-local JumpEnabled = false
+-- TẠO GUI CƠ BẢN (TỐI ƯU MOBILE)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+local UIStroke = Instance.new("UIStroke")
 
--- Hàm cập nhật chỉ số cho nhân vật
-local function ApplyStats()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Name = "SonnaFlyMobile"
 
-    -- Bật UseJumpPower để đảm bảo JumpPower có tác dụng
-    humanoid.UseJumpPower = true
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.1, 0, 0.5, 0) -- Đặt bên trái để không vướng nút nhảy
+MainFrame.Size = UDim2.new(0, 120, 0, 60)
+MainFrame.Active = true
 
-    if SpeedEnabled then
-        humanoid.WalkSpeed = WalkSpeedValue
-    else
-        humanoid.WalkSpeed = 16 -- Tốc độ mặc định
+-- Hàm làm cho GUI có thể kéo được trên điện thoại (Touch Draggable)
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
     end
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 
-    if JumpEnabled then
-        humanoid.JumpPower = JumpPowerValue
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+ToggleButton.Parent = MainFrame
+ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+ToggleButton.BackgroundTransparency = 1
+ToggleButton.Text = "FLY: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 20
+
+-- BIẾN LOGIC
+local flying = false
+local speed = 50
+local bv, bg
+
+function toggleFly()
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    if flying then
+        flying = false
+        ToggleButton.Text = "FLY: OFF"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 50, 50)
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+        hum.PlatformStand = false
     else
-        humanoid.JumpPower = 50 -- Nhảy mặc định
+        flying = true
+        ToggleButton.Text = "FLY: ON"
+        ToggleButton.TextColor3 = Color3.fromRGB(50, 255, 50)
+        
+        hum.PlatformStand = true
+        
+        -- Lực nâng
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = hrp
+        
+        -- Giữ hướng người theo Camera
+        bg = Instance.new("BodyGyro")
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 10000
+        bg.Parent = hrp
+
+        -- Vòng lặp xử lý di chuyển (Tương thích Joystick)
+        task.spawn(function()
+            while flying do
+                local camera = workspace.CurrentCamera
+                -- Lấy hướng di chuyển từ Joystick của Mobile thông qua MoveDirection
+                if hum and hrp then
+                    bg.CFrame = camera.CFrame
+                    -- Nếu người dùng đang đẩy Joystick, MoveDirection sẽ khác 0
+                    if hum.MoveDirection.Magnitude > 0 then
+                        bv.Velocity = camera.CFrame.LookVector * (hum.MoveDirection.Magnitude * speed)
+                    else
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+                RunService.RenderStepped:Wait()
+            end
+        end)
     end
 end
 
--- Tự động áp dụng lại khi reset (CharacterAdded)
-game.Players.LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.5) -- Đợi nhân vật load xong hẳn
-    ApplyStats()
-end)
-
--- Tạo Window Sonnahub
-local Window = Rayfield:CreateWindow({
-   Name = "Sonnahub",
-   LoadingTitle = "Đang tải Sonnahub...",
-   LoadingSubtitle = "by Gemini",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "SonnahubConfig",
-      FileName = "MainConfig"
-   },
-   KeySystem = false -- Tắt hệ thống key để bạn dùng cho nhanh
-})
-
--- Tạo Tab Main
-local MainTab = Window:CreateTab("Player Control", 4483362458) -- Icon người
-
--- PHẦN SPEED (TỐC ĐỘ)
-MainTab:CreateSection("Speed Settings")
-
-MainTab:CreateToggle({
-   Name = "Bật/Tắt Tốc độ",
-   CurrentValue = false,
-   Callback = function(Value)
-      SpeedEnabled = Value
-      ApplyStats()
-   end,
-})
-
-MainTab:CreateSlider({
-   Name = "Chỉnh Tốc độ (Speed)",
-   Range = {16, 500},
-   Increment = 1,
-   Suffix = " Speed",
-   CurrentValue = 16,
-   Callback = function(Value)
-      WalkSpeedValue = Value
-      if SpeedEnabled then
-          ApplyStats()
-      end
-   end,
-})
-
--- PHẦN JUMP POWER (SỨC NHẢY)
-MainTab:CreateSection("Jump Settings")
-
-MainTab:CreateToggle({
-   Name = "Bật/Tắt Nhảy cao",
-   CurrentValue = false,
-   Callback = function(Value)
-      JumpEnabled = Value
-      ApplyStats()
-   end,
-})
-
-MainTab:CreateSlider({
-   Name = "Chỉnh Sức nhảy (Jump)",
-   Range = {50, 500},
-   Increment = 1,
-   Suffix = " Power",
-   CurrentValue = 50,
-   Callback = function(Value)
-      JumpPowerValue = Value
-      if JumpEnabled then
-          ApplyStats()
-      end
-   end,
-})
-
-Rayfield:Notify({
-   Title = "Thành công!",
-   Content = "Chào mừng bạn đến với Sonnahub",
-   Duration = 5,
-   Image = 4483362458,
-})
-
+ToggleButton.MouseButton1Click:Connect(toggleFly)
