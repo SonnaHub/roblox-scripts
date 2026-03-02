@@ -284,7 +284,7 @@ UIS.InputBegan:Connect(function(i,gp)
 
     if gp then return end
 
-    if i.KeyCode == Enum.KeyCode.F then
+    if i.KeyCode == Enum.KeyCode.R then
 
         toggleFly()
 
